@@ -1,56 +1,151 @@
-let buffer;
-let brightness2D = []; // brightness2D[x][y] is how bright the word is at one pixel of the buffer
+let txt = 'Come \n and \n get me!';
+let fontSize = 250;
+let gridDensity = 12;
+let mouseRadius = 120;
+let spreadSpeed = 30;
+let returnSpeed = 30;
+let particles = [];
+let textBuffer;
+let currentTheme = 0;
 
-async function setup() {
-    createCanvas(windowWidth, windowHeight);
+let themes = [
+  {
+    bg: [0, 20, 60],
+    bgDark: [0, 80, 120],
+    mouseEmoji: '🦈',
+    emojis: ['🐟', '🐠', '🐡']
+  },
+  {
+    bg: [30, 60, 20],
+    bgDark: [60, 120, 40],
+    mouseEmoji: '🦫',
+    emojis: ['🌲', '🌳', '🌴']
+  },
+  {
+    bg: [40, 45, 35],
+    bgDark: [80, 88, 72],
+    mouseEmoji: '🤚',
+    emojis: ['🌷', '🌻', '🪻']
+  },
+  {
+    bg: [35, 15, 50],
+    bgDark: [72, 28, 100],
+    mouseEmoji: '🐦‍⬛',
+    emojis: ['🪰', '🪲', '🪱']
+  }
+];
 
-    // a small invisible canvas: the word is drawn on it once, and only used as data
-    buffer = createGraphics(120, 60);
-    buffer.background(0);
-    buffer.fill(255);
-    buffer.textStyle(BOLD);
-    buffer.textAlign(CENTER, CENTER);
-    buffer.textSize(40);
-    buffer.text("Type", buffer.width / 2, buffer.height / 2);
+let particleEmojis;
+let mouseEmoji;
+let emojiSize;
+let mouseEmojiSize = 60;
 
-    // blur the word, so the edges of the letters become soft slopes instead of hard steps
-    // filter() is asynchronous in p5.js 2.x, so await it before reading pixels
-    await buffer.filter(BLUR, 1.2);
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  textBuffer = createGraphics(width, height);
+  textAlign(CENTER, CENTER);
 
-    // read the brightness of every pixel once: [0] is the red channel, 0 for black and 255 for white
-    for (let x = 0; x < buffer.width; x++) {
-        brightness2D[x] = [];
-        for (let y = 0; y < buffer.height; y++) {
-            brightness2D[x][y] = buffer.get(x, y)[0];
-        }
-    }
+  textBuffer.background(0);
+  textBuffer.textFont("Georgia");
+  textBuffer.fill(255);
+  textBuffer.textSize(fontSize);
+  textBuffer.textAlign(CENTER, CENTER);
+  textBuffer.textLeading(fontSize - 30); 
+  textBuffer.text(txt, width / 2, height / 2);
+
+  loadTheme();
+}
+
+function loadTheme() {
+  let theme = themes[currentTheme];
+  background(theme.bg[0], theme.bg[1], theme.bg[2]);
+  mouseEmoji = theme.mouseEmoji;
+  particleEmojis = theme.emojis;
+  emojiSize = gridDensity * random(1, 2);
+  generateParticles();
 }
 
 function draw() {
-    background(0);
-    stroke(255);
-    strokeWeight(2);
-    noFill();
+  let theme = themes[currentTheme];
 
-    let stepX = width / buffer.width;   // distance between two points of a line
-    let stepY = height / buffer.height; // distance between two lines
+  // Semi-transparent tint
+  background(theme.bg[0], theme.bg[1], theme.bg[2], 80);
 
-    // mouseX sets how high the word is pushed up, mouseY sets how strongly the lines wobble
-    let amount = map(mouseX, 0, width, 0, 40);
-    let wobble = map(mouseY, 0, height, 0, 20);
+  // Instruction text
+  fill(theme.bgDark[0], theme.bgDark[1], theme.bgDark[2], 200);
+  textSize(16);
+  text('Press [1], [2], [3] or [4]', width / 2, height - 40);
 
-    // one line for every row of the buffer
-    for (let y = 0; y < buffer.height; y++) {
-        beginShape();
-        for (let x = 0; x < buffer.width; x++) {
-            // bright pixels (the letters) push the line upward
-            let lift = brightness2D[x][y] / 255 * amount;
+  textBuffer.background(0);
+  textBuffer.fill(255);
+  textBuffer.textSize(fontSize);
+  textBuffer.textAlign(CENTER, CENTER);
+  textBuffer.text(txt, width / 2, height / 2);
 
-            // smaller steps in noise() make the wobble slower and smoother
-            lift += noise(x * 0.05, y * 0.05, frameCount * 0.01) * wobble;
+  for (let p of particles) {
+    p.update();
+    p.draw();
+  }
 
-            vertex(x * stepX, y * stepY - lift);
-        }
-        endShape();
+  // Draw mouse emoji
+  textSize(mouseEmojiSize);
+  text(mouseEmoji, mouseX, mouseY);
+}
+
+function generateParticles() {
+  particles = [];
+  let theme = themes[currentTheme];
+
+  for (let y = 0; y < height; y += gridDensity) {
+    for (let x = 0; x < width; x += gridDensity) {
+      if (textBuffer.get(x, y)[0] > 128) {
+        particles.push(new Particle(x, y, theme));
+      }
     }
+  }
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  generateParticles();
+}
+
+function keyPressed() {
+  if (key === '1') { currentTheme = 0; loadTheme(); }
+  else if (key === '2') { currentTheme = 1; loadTheme(); }
+  else if (key === '3') { currentTheme = 2; loadTheme(); }
+  else if (key === '4') { currentTheme = 3; loadTheme(); }
+}
+
+class Particle {
+  constructor(x, y, theme) {
+    this.x = this.baseX = x;
+    this.y = this.baseY = y;
+    this.opa = random(200, 255);
+    this.emoji = theme.emojis[floor(random(theme.emojis.length))];
+  }
+
+  update() {
+    let waveX = sin(frameCount * 0.02 + this.baseY * 0.01) * 8;
+    let waveY = cos(frameCount * 0.02 + this.baseX * 0.01) * 8;
+
+    let targetX = this.baseX + waveX;
+    let targetY = this.baseY + waveY;
+
+    let dx = mouseX - this.x, dy = mouseY - this.y;
+    let d = sqrt(dx*dx + dy*dy);
+    if (d < mouseRadius && d > 0) {
+      let f = (mouseRadius - d) / mouseRadius * spreadSpeed;
+      this.x -= (dx / d) * f;
+      this.y -= (dy / d) * f;
+    } else {
+      this.x = lerp(this.x, targetX, 1 / returnSpeed);
+      this.y = lerp(this.y, targetY, 1 / returnSpeed);
+    }
+  }
+
+  draw() {
+    textSize(emojiSize);
+    text(this.emoji, this.x, this.y);
+  }
 }
