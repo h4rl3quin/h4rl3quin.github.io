@@ -16,10 +16,10 @@ let themes = [
     emojis: ['🐟', '🐠', '🐡']
   },
   {
-    bg: [30, 60, 20],
-    bgDark: [60, 120, 40],
-    mouseEmoji: '🦫',
-    emojis: ['🌲', '🌳', '🌴']
+    bg: [60, 20, 20],
+    bgDark: [120, 60, 40],
+    mouseEmoji: '🫦',
+    emojis: ['🍔', '🌮', '🍟']
   },
   {
     bg: [40, 45, 35],
