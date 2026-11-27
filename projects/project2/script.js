@@ -212,7 +212,7 @@ function draw() {
   background(BG);
 
   // hint
-  noStroke(); fill('#8d8d8d'); textAlign(CENTER, TOP); textSize(13);
+  noStroke(); fill('#E8A317' ); textAlign(CENTER, TOP); textSize(16);
   text('Resize the blocks with the sliders   •   press 1 to drop butter   •   press 2 to drop marriages',
        width / 2, 12);
 
